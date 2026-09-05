@@ -9,4 +9,6 @@
  * 🟢 You can import this file directly.
  */
 export type * from './models/Users'
+export type * from './models/Roles'
+export type * from './models/Teams'
 export type * from './commonInputTypes'

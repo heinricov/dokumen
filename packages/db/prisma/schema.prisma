@@ -8,18 +8,38 @@ datasource db {
 }
 
 model Users {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  username  String?
-  password  String
-  role      Role     @default(USER)
-  team      String?
+  id       String  @id @default(uuid())
+  email    String  @unique
+  username String?
+  password String
+
+  roleId String
+  teamId String?
+
+  role Roles  @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  team Teams? @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([roleId])
+  @@index([teamId])
+}
+
+model Roles {
+  id    String  @id @default(uuid())
+  name  String  @unique
+  users Users[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-enum Role {
-  ADMIN
-  MODERATOR
-  USER
+model Teams {
+  id    String  @id @default(uuid())
+  name  String  @unique
+  users Users[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
