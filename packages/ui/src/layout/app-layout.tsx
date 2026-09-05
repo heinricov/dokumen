@@ -3,13 +3,19 @@ import { TooltipProvider } from "@workspace/ui/components/tooltip"
 import { AppSidebar } from "@workspace/ui/layout/app-sidebar"
 import { AppHeader } from "@workspace/ui/layout/app-header"
 
+const user = {
+  name: "shadcn",
+  email: "m@example.com",
+  avatar: "/avatars/shadcn.jpg",
+}
+
 export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <TooltipProvider>
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
-          <AppHeader />
+          <AppHeader user={user} />
           <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
         </SidebarInset>
       </SidebarProvider>

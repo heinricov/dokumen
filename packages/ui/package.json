@@ -38,7 +38,9 @@
   "exports": {
     "./globals.css": "./src/styles/globals.css",
     "./lib/*": "./src/lib/*.ts",
+    "./theme-provider": "./src/lib/theme-provider.tsx",
+    "./hooks/*": "./src/hooks/*.ts",
     "./components/*": "./src/components/*.tsx",
-    "./hooks/*": "./src/hooks/*.ts"
+    "./layout/*": "./src/layout/*.tsx"
   }
 }

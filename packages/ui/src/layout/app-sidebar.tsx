@@ -2,9 +2,8 @@
 
 import * as React from "react"
 
+import { NavCollaps } from "@workspace/ui/layout/nav-collaps"
 import { NavMain } from "@workspace/ui/layout/nav-main"
-import { NavProjects } from "@workspace/ui/layout/nav-projects"
-import { NavUser } from "@workspace/ui/layout/nav-user"
 import { TeamSwitcher } from "@workspace/ui/layout/team-switcher"
 import {
   Sidebar,
@@ -13,164 +12,141 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@workspace/ui/components/sidebar"
-import { GalleryVerticalEndIcon, AudioLinesIcon, TerminalIcon, TerminalSquareIcon, BotIcon, BookOpenIcon, Settings2Icon, FrameIcon, PieChartIcon, MapIcon } from "lucide-react"
+import {
+  GalleryVerticalEndIcon,
+  AudioLinesIcon,
+  TerminalIcon,
+  TerminalSquareIcon,
+  BotIcon,
+  BookOpenIcon,
+  Settings2Icon,
+  FrameIcon,
+  PieChartIcon,
+  MapIcon,
+} from "lucide-react"
+import { AppLogo } from "./app-logo"
 
 // This is sample data.
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
   teams: [
     {
-      name: "Acme Inc",
-      logo: (
-        <GalleryVerticalEndIcon
-        />
-      ),
-      plan: "Enterprise",
+      name: "Team Dokumen",
+      logo: <GalleryVerticalEndIcon />,
+      plan: "Admin",
     },
     {
-      name: "Acme Corp.",
-      logo: (
-        <AudioLinesIcon
-        />
-      ),
-      plan: "Startup",
+      name: "Warehouse",
+      logo: <AudioLinesIcon />,
+      plan: "Admin",
     },
     {
-      name: "Evil Corp.",
-      logo: (
-        <TerminalIcon
-        />
-      ),
-      plan: "Free",
+      name: "Finance",
+      logo: <TerminalIcon />,
+      plan: "Admin",
     },
   ],
-  navMain: [
+  collapsMenu: [
     {
       title: "Playground",
-      url: "#",
-      icon: (
-        <TerminalSquareIcon
-        />
-      ),
+      href: "#",
+      icon: <TerminalSquareIcon />,
       isActive: true,
       items: [
         {
           title: "History",
-          url: "#",
+          href: "#",
         },
         {
           title: "Starred",
-          url: "#",
+          href: "#",
         },
         {
           title: "Settings",
-          url: "#",
+          href: "#",
         },
       ],
     },
     {
       title: "Models",
-      url: "#",
-      icon: (
-        <BotIcon
-        />
-      ),
+      href: "#",
+      icon: <BotIcon />,
       items: [
         {
           title: "Genesis",
-          url: "#",
+          href: "#",
         },
         {
           title: "Explorer",
-          url: "#",
+          href: "#",
         },
         {
           title: "Quantum",
-          url: "#",
+          href: "#",
         },
       ],
     },
     {
       title: "Documentation",
-      url: "#",
-      icon: (
-        <BookOpenIcon
-        />
-      ),
+      href: "#",
+      icon: <BookOpenIcon />,
       items: [
         {
           title: "Introduction",
-          url: "#",
+          href: "#",
         },
         {
           title: "Get Started",
-          url: "#",
+          href: "#",
         },
         {
           title: "Tutorials",
-          url: "#",
+          href: "#",
         },
         {
           title: "Changelog",
-          url: "#",
+          href: "#",
         },
       ],
     },
     {
       title: "Settings",
-      url: "#",
-      icon: (
-        <Settings2Icon
-        />
-      ),
+      href: "#",
+      icon: <Settings2Icon />,
       items: [
         {
           title: "General",
-          url: "#",
+          href: "#",
         },
         {
           title: "Team",
-          url: "#",
+          href: "#",
         },
         {
           title: "Billing",
-          url: "#",
+          href: "#",
         },
         {
           title: "Limits",
-          url: "#",
+          href: "#",
         },
       ],
     },
   ],
-  projects: [
+  mainmenu: [
     {
       name: "Design Engineering",
-      url: "#",
-      icon: (
-        <FrameIcon
-        />
-      ),
+      href: "#",
+      icon: <FrameIcon />,
     },
     {
       name: "Sales & Marketing",
-      url: "#",
-      icon: (
-        <PieChartIcon
-        />
-      ),
+      href: "#",
+      icon: <PieChartIcon />,
     },
     {
       name: "Travel",
-      url: "#",
-      icon: (
-        <MapIcon
-        />
-      ),
+      href: "#",
+      icon: <MapIcon />,
     },
   ],
 }
@@ -182,11 +158,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        <NavMain items={data.mainmenu} />
+        <NavCollaps items={data.collapsMenu} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <AppLogo />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
