@@ -41,6 +41,7 @@
     "./theme-provider": "./src/lib/theme-provider.tsx",
     "./hooks/*": "./src/hooks/*.ts",
     "./components/*": "./src/components/*.tsx",
-    "./layout/*": "./src/layout/*.tsx"
+    "./layout/*": "./src/layout/*.tsx",
+    "./auth/*": "./src/auth/*.tsx"
   }
 }

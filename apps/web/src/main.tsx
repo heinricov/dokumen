@@ -1,17 +1,17 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
-import { AppLayout } from "@workspace/ui/layout/app-layout"
-
-import "@workspace/ui/globals.css"
+import { BrowserRouter } from "react-router-dom"
 import { App } from "./App.tsx"
 import { ThemeProvider } from "@workspace/ui/theme-provider"
 
+import "@workspace/ui/globals.css"
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ThemeProvider>
-      <AppLayout>
+    <BrowserRouter>
+      <ThemeProvider>
         <App />
-      </AppLayout>
-    </ThemeProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   </StrictMode>
 )
