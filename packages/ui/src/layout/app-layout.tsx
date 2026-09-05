@@ -1,7 +1,7 @@
-import { AppSidebar } from "@workspace/ui/layout/app-sidebar"
-import { AppHeader } from "@workspace/ui/layout/app-header"
 import { SidebarInset, SidebarProvider } from "@workspace/ui/components/sidebar"
 import { TooltipProvider } from "@workspace/ui/components/tooltip"
+import { AppSidebar } from "@workspace/ui/layout/app-sidebar"
+import { AppHeader } from "@workspace/ui/layout/app-header"
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
