@@ -1,26 +1,50 @@
 import { Injectable } from '@nestjs/common';
-import { CreateTeamDto } from './dto/create-team.dto';
-import { UpdateTeamDto } from './dto/update-team.dto';
+import type {
+  CreateTeamInput,
+  Team,
+  TeamListQuery,
+  TeamListResponse,
+  UpdateTeamInput,
+} from '@workspace/types';
+import { PrismaService } from '../db/prisma.service';
 
 @Injectable()
 export class TeamsService {
-  create(createTeamDto: CreateTeamDto) {
-    return 'This action adds a new team';
+  constructor(private readonly prisma: PrismaService) {}
+
+  async create(data: CreateTeamInput): Promise<Team> {
+    return this.prisma.db.teams.create({ data });
   }
 
-  findAll() {
-    return `This action returns all teams`;
+  async findAll(query: TeamListQuery = {}): Promise<TeamListResponse> {
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.max(1, Number(query.limit) || 10);
+    const where = query.search
+      ? { name: { contains: query.search, mode: 'insensitive' as const } }
+      : {};
+
+    const [data, total] = await this.prisma.db.$transaction([
+      this.prisma.db.teams.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.db.teams.count({ where }),
+    ]);
+
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} team`;
+  async findOne(id: string): Promise<Team> {
+    return this.prisma.db.teams.findUniqueOrThrow({ where: { id } });
   }
 
-  update(id: number, updateTeamDto: UpdateTeamDto) {
-    return `This action updates a #${id} team`;
+  async update(id: string, data: UpdateTeamInput): Promise<Team> {
+    return this.prisma.db.teams.update({ where: { id }, data });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} team`;
+  async remove(id: string): Promise<Team> {
+    return this.prisma.db.teams.delete({ where: { id } });
   }
 }
