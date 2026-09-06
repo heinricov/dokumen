@@ -18,10 +18,10 @@ export interface RoleQuery {
   name?: string
 }
 
-export interface RoleListQuery {
+import type { PaginationQuery } from './pagination'
+
+export interface RoleListQuery extends PaginationQuery {
   search?: string
-  page?: number
-  limit?: number
 }
 
 export interface RoleListResponse {

@@ -56,3 +56,13 @@ export type Roles = Prisma.RolesModel
  * 
  */
 export type Teams = Prisma.TeamsModel
+/**
+ * Model RefreshToken
+ * 
+ */
+export type RefreshToken = Prisma.RefreshTokenModel
+/**
+ * Model PasswordReset
+ * 
+ */
+export type PasswordReset = Prisma.PasswordResetModel

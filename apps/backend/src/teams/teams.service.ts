@@ -6,6 +6,7 @@ import type {
   TeamListResponse,
   UpdateTeamInput,
 } from '@workspace/types';
+import { sanitizeLimit, sanitizePage } from '../common/utils/pagination';
 import { PrismaService } from '../db/prisma.service';
 
 @Injectable()
@@ -17,8 +18,8 @@ export class TeamsService {
   }
 
   async findAll(query: TeamListQuery = {}): Promise<TeamListResponse> {
-    const page = Math.max(1, Number(query.page) || 1);
-    const limit = Math.max(1, Number(query.limit) || 10);
+    const page = sanitizePage(query.page);
+    const limit = sanitizeLimit(query.limit);
     const where = query.search
       ? { name: { contains: query.search, mode: 'insensitive' as const } }
       : {};

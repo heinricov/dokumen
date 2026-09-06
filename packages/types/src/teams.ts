@@ -18,10 +18,10 @@ export interface TeamQuery {
   name?: string
 }
 
-export interface TeamListQuery {
+import type { PaginationQuery } from './pagination'
+
+export interface TeamListQuery extends PaginationQuery {
   search?: string
-  page?: number
-  limit?: number
 }
 
 export interface TeamListResponse {

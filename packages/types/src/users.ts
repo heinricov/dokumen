@@ -2,7 +2,6 @@ export interface User {
   id: string
   email: string
   username: string | null
-  password?: string
   roleId: string
   teamId: string | null
   createdAt: Date

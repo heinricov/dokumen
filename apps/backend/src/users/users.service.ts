@@ -13,6 +13,7 @@ import type {
   UserListResponse,
 } from '@workspace/types';
 import bcrypt from 'bcryptjs';
+import { sanitizeLimit, sanitizePage } from '../common/utils/pagination';
 import { PrismaService } from '../db/prisma.service';
 
 const SALT_ROUNDS = 10;
@@ -36,6 +37,7 @@ export class UsersService {
           roleId: data.roleId,
           teamId: data.teamId,
         },
+        omit: { password: true },
       });
     } catch (error) {
       if (
@@ -49,8 +51,8 @@ export class UsersService {
   }
 
   async findAll(query: UserListQuery = {}): Promise<UserListResponse> {
-    const page = Math.max(1, Number(query.page) || 1);
-    const limit = Math.max(1, Number(query.limit) || 10);
+    const page = sanitizePage(query.page);
+    const limit = sanitizeLimit(query.limit);
     const { search, roleId, teamId } = query;
     const where = {
       ...(search

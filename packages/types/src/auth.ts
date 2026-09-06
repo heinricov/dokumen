@@ -6,14 +6,13 @@ export interface LoginInput {
 export interface LoginResponse {
   user: AuthUser
   accessToken: string
-  refreshToken?: string
+  refreshToken: string
 }
 
 export interface RegisterInput {
   email: string
   username?: string
   password: string
-  roleId?: string
   teamId?: string
 }
 
@@ -39,20 +38,22 @@ export interface ResetPasswordResponse {
   message: string
 }
 
-export interface Session {
-  id: string
-  userId: string
-  expiresAt: Date
-  createdAt: Date
-  updatedAt: Date
+export interface RefreshTokenInput {
+  refreshToken: string
 }
 
-export interface SessionUser {
-  id: string
-  email: string
-  username: string | null
-  roleId: string
-  teamId: string | null
+export interface RefreshTokenResponse {
+  user: AuthUser
+  accessToken: string
+  refreshToken: string
+}
+
+export interface LogoutInput {
+  refreshToken: string
+}
+
+export interface LogoutResponse {
+  message: string
 }
 
 export interface AuthUser {

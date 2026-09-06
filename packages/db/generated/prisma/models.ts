@@ -11,4 +11,6 @@
 export type * from './models/Users'
 export type * from './models/Roles'
 export type * from './models/Teams'
+export type * from './models/RefreshToken'
+export type * from './models/PasswordReset'
 export type * from './commonInputTypes'
