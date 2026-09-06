@@ -36,8 +36,11 @@ export class AuthController {
 
   @Post('logout')
   @UseGuards(JwtAuthGuard)
-  logout(@Body(validateDto(LogoutDto)) dto: LogoutDto) {
-    return this.authService.logout(dto);
+  logout(
+    @Body(validateDto(LogoutDto)) dto: LogoutDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.authService.logout(dto, user.id);
   }
 
   @Post('forgot-password')

@@ -7,11 +7,20 @@ datasource db {
   provider = "postgresql"
 }
 
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+
 model Users {
   id       String  @id @default(uuid())
   email    String  @unique
   username String?
   password String
+
+  status            AccountStatus @default(ACTIVE)
+  passwordChangedAt DateTime?
 
   roleId String
   teamId String?
@@ -30,9 +39,10 @@ model Users {
 }
 
 model Roles {
-  id    String  @id @default(uuid())
-  name  String  @unique
-  users Users[]
+  id       String  @id @default(uuid())
+  name     String  @unique
+  isSystem Boolean @default(false)
+  users    Users[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -50,7 +60,7 @@ model Teams {
 model RefreshToken {
   id        String   @id @default(uuid())
   userId    String
-  tokenHash String
+  tokenHash String   @unique
   expiresAt DateTime
   revokedAt DateTime?
 
@@ -60,13 +70,12 @@ model RefreshToken {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
-  @@index([tokenHash])
 }
 
 model PasswordReset {
   id        String   @id @default(uuid())
   userId    String
-  tokenHash String
+  tokenHash String   @unique
   expiresAt DateTime
   usedAt    DateTime?
 
@@ -75,5 +84,4 @@ model PasswordReset {
   createdAt DateTime @default(now())
 
   @@index([userId])
-  @@index([tokenHash])
 }

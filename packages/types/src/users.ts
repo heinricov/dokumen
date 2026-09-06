@@ -1,7 +1,10 @@
+export type AccountStatus = 'ACTIVE' | 'SUSPENDED' | 'DISABLED'
+
 export interface User {
   id: string
   email: string
   username: string | null
+  status: AccountStatus
   roleId: string
   teamId: string | null
   createdAt: Date

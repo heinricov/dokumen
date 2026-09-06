@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
+import { AccountStatus } from '@workspace/db';
 import type { AuthUser } from '@workspace/types';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { readJwtEnv } from '../config/jwt.config';
@@ -8,6 +9,7 @@ import { Inject } from '@nestjs/common';
 
 export type JwtPayload = {
   sub: string;
+  iat?: number;
 };
 
 @Injectable()
@@ -34,6 +36,19 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     if (!user) {
       throw new UnauthorizedException('Invalid or expired token');
+    }
+
+    if (user.status !== AccountStatus.ACTIVE) {
+      throw new UnauthorizedException('Account is not active.');
+    }
+
+    if (user.passwordChangedAt) {
+      const requestedAt = (payload.iat ?? 0) * 1000;
+      if (requestedAt > 0 && user.passwordChangedAt.getTime() > requestedAt) {
+        throw new UnauthorizedException(
+          'Token was issued before the last password change. Please log in again.',
+        );
+      }
     }
 
     return {

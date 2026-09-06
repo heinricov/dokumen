@@ -10,13 +10,14 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import type { RoleListQuery } from '@workspace/types';
 import { Roles } from '../common/decorators/roles.decorator';
+import { IdParamDto } from '../common/dto/common.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { validateDto } from '../common/pipes/dto-validation.pipe';
 import { RolesService } from './roles.service';
 import { CreateRoleDto } from './dto/create-role.dto';
+import { RoleListQueryDto } from './dto/role-list-query.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 
 @Controller('roles')
@@ -34,29 +35,29 @@ export class RolesController {
   }
 
   @Get()
-  findAll(@Query() query: RoleListQuery) {
+  findAll(@Query(validateDto(RoleListQueryDto)) query: RoleListQueryDto) {
     return this.rolesService.findAll(query);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.rolesService.findOne(id);
+  findOne(@Param(validateDto(IdParamDto)) params: IdParamDto) {
+    return this.rolesService.findOne(params.id);
   }
 
   @Patch(':id')
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
   update(
-    @Param('id') id: string,
+    @Param(validateDto(IdParamDto)) params: IdParamDto,
     @Body(validateDto(UpdateRoleDto)) updateRoleDto: UpdateRoleDto,
   ) {
-    return this.rolesService.update(id, updateRoleDto);
+    return this.rolesService.update(params.id, updateRoleDto);
   }
 
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
-  remove(@Param('id') id: string) {
-    return this.rolesService.remove(id);
+  remove(@Param(validateDto(IdParamDto)) params: IdParamDto) {
+    return this.rolesService.remove(params.id);
   }
 }

@@ -1,4 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 import type {
   CreateRoleInput,
   Role,
@@ -6,6 +11,7 @@ import type {
   RoleListResponse,
   UpdateRoleInput,
 } from '@workspace/types';
+import { isSystemRoleName } from '@workspace/types';
 import { sanitizeLimit, sanitizePage } from '../common/utils/pagination';
 import { PrismaService } from '../db/prisma.service';
 
@@ -14,6 +20,11 @@ export class RolesService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async create(data: CreateRoleInput): Promise<Role> {
+    if (isSystemRoleName(data.name)) {
+      throw new ConflictException(
+        `Role name "${data.name}" is a reserved system role.`,
+      );
+    }
     return this.prisma.db.roles.create({ data });
   }
 
@@ -42,10 +53,22 @@ export class RolesService {
   }
 
   async update(id: string, data: UpdateRoleInput): Promise<Role> {
+    const role = await this.prisma.db.roles.findUniqueOrThrow({
+      where: { id },
+    });
+    if (role.isSystem) {
+      throw new ForbiddenException('System roles cannot be modified.');
+    }
     return this.prisma.db.roles.update({ where: { id }, data });
   }
 
   async remove(id: string): Promise<Role> {
+    const role = await this.prisma.db.roles.findUniqueOrThrow({
+      where: { id },
+    });
+    if (role.isSystem) {
+      throw new ForbiddenException('System roles cannot be deleted.');
+    }
     return this.prisma.db.roles.delete({ where: { id } });
   }
 }

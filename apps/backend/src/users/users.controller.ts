@@ -10,13 +10,16 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import type { UserListQuery } from '@workspace/types';
+import type { AuthUser } from '@workspace/types';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
+import { IdParamDto } from '../common/dto/common.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { validateDto } from '../common/pipes/dto-validation.pipe';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UserListQueryDto } from './dto/user-list-query.dto';
 import { UsersService } from './users.service';
 
 @Controller('users')
@@ -28,34 +31,41 @@ export class UsersController {
 
   @Post()
   @Roles('ADMIN', 'MODERATOR')
-  create(@Body(validateDto(CreateUserDto)) createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  create(
+    @Body(validateDto(CreateUserDto)) createUserDto: CreateUserDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.usersService.create(createUserDto, user.role.name);
   }
 
   @Get()
   @Roles('ADMIN', 'MODERATOR')
-  findAll(@Query() query: UserListQuery) {
+  findAll(@Query(validateDto(UserListQueryDto)) query: UserListQueryDto) {
     return this.usersService.findAll(query);
   }
 
   @Get(':id')
   @Roles('ADMIN', 'MODERATOR')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id);
+  findOne(@Param(validateDto(IdParamDto)) params: IdParamDto) {
+    return this.usersService.findOne(params.id);
   }
 
   @Patch(':id')
   @Roles('ADMIN', 'MODERATOR')
   update(
-    @Param('id') id: string,
+    @Param(validateDto(IdParamDto)) params: IdParamDto,
     @Body(validateDto(UpdateUserDto)) updateUserDto: UpdateUserDto,
+    @CurrentUser() user: AuthUser,
   ) {
-    return this.usersService.update(id, updateUserDto);
+    return this.usersService.update(params.id, updateUserDto, user.role.name);
   }
 
   @Delete(':id')
   @Roles('ADMIN', 'MODERATOR')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  remove(
+    @Param(validateDto(IdParamDto)) params: IdParamDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.usersService.remove(params.id, user.role.name);
   }
 }

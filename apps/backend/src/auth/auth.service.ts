@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import type { Users } from '@workspace/db';
+import { AccountStatus, type Users } from '@workspace/db';
 import type {
   AuthUser,
   ForgotPasswordInput,
@@ -21,13 +21,15 @@ import type {
   ResetPasswordInput,
   ResetPasswordResponse,
 } from '@workspace/types';
+import { ROLE_NAMES } from '@workspace/types';
 import bcrypt from 'bcryptjs';
 import { readJwtEnv } from '../config/jwt.config';
 import { PrismaService } from '../db/prisma.service';
+import { secondPrecision } from '../common/utils/time';
 import { generateRefreshToken, generateResetToken, hashToken } from './tokens';
 
 const SALT_ROUNDS = 10;
-const DEFAULT_ROLE_NAME = 'USER';
+const DUMMY_PASSWORD = 'dummy-password-for-timing-equalization';
 
 type AuthUserRow = Omit<Users, 'password'> & {
   role: { id: string; name: string };
@@ -36,6 +38,8 @@ type AuthUserRow = Omit<Users, 'password'> & {
 
 @Injectable()
 export class AuthService {
+  private dummyHashPromise: Promise<string> | undefined;
+
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(JwtService) private readonly jwt: JwtService,
@@ -60,6 +64,7 @@ export class AuthService {
         email,
         username: input.username,
         password: await bcrypt.hash(input.password, SALT_ROUNDS),
+        passwordChangedAt: secondPrecision(),
         roleId,
         teamId: input.teamId,
       },
@@ -73,8 +78,20 @@ export class AuthService {
   async login(input: LoginInput): Promise<LoginResponse> {
     const email = input.email.toLowerCase();
     const full = await this.prisma.db.users.findUnique({ where: { email } });
-    if (!full || !(await bcrypt.compare(input.password, full.password))) {
+
+    // Always run a bcrypt comparison so timing does not reveal whether the
+    // account exists (user enumeration mitigation).
+    const passwordValid = await bcrypt.compare(
+      input.password,
+      full ? full.password : await this.getDummyHash(),
+    );
+
+    if (!full || !passwordValid) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (full.status !== AccountStatus.ACTIVE) {
+      throw new UnauthorizedException('Account is not active.');
     }
 
     const user = await this.fetchUser(full.id);
@@ -86,7 +103,7 @@ export class AuthService {
 
   async refresh(input: RefreshTokenInput): Promise<RefreshTokenResponse> {
     const tokenHash = hashToken(input.refreshToken);
-    const token = await this.prisma.db.refreshToken.findFirst({
+    const token = await this.prisma.db.refreshToken.findUnique({
       where: { tokenHash },
     });
 
@@ -94,7 +111,14 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    if (token.revokedAt) {
+    // Atomic claim: only one concurrent request can rotate a given token.
+    // If the claim fails, the token was already consumed (replay/reuse/theft).
+    const claim = await this.prisma.db.refreshToken.updateMany({
+      where: { id: token.id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+
+    if (claim.count === 0) {
       await this.revokeAllTokens(token.userId);
       throw new UnauthorizedException(
         'Refresh token has been reused. All sessions have been revoked.',
@@ -106,11 +130,6 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token has expired');
     }
 
-    await this.prisma.db.refreshToken.update({
-      where: { id: token.id },
-      data: { revokedAt: new Date() },
-    });
-
     const user = await this.fetchUser(token.userId);
     const accessToken = this.signAccessToken(user.id);
     const refreshToken = await this.createRefreshToken(user.id);
@@ -118,10 +137,11 @@ export class AuthService {
     return { user, accessToken, refreshToken };
   }
 
-  async logout(input: LogoutInput): Promise<LogoutResponse> {
+  async logout(input: LogoutInput, userId: string): Promise<LogoutResponse> {
     const tokenHash = hashToken(input.refreshToken);
+    // Only the logged-in user may revoke their own session.
     await this.prisma.db.refreshToken.updateMany({
-      where: { tokenHash, revokedAt: null },
+      where: { tokenHash, userId, revokedAt: null },
       data: { revokedAt: new Date() },
     });
     return { message: 'Logged out successfully.' };
@@ -138,6 +158,14 @@ export class AuthService {
       const { resetExpiresInMs } = readJwtEnv();
 
       await this.prisma.db.$transaction([
+        // Clean up consumed/expired reset records for this account.
+        this.prisma.db.passwordReset.deleteMany({
+          where: {
+            userId: user.id,
+            OR: [{ usedAt: { not: null } }, { expiresAt: { lt: new Date() } }],
+          },
+        }),
+        // Invalidate any previously issued but still-valid reset tokens.
         this.prisma.db.passwordReset.updateMany({
           where: { userId: user.id, usedAt: null },
           data: { usedAt: new Date() },
@@ -152,8 +180,10 @@ export class AuthService {
       ]);
 
       // Dev convenience: no email transport is configured yet, so surface the
-      // reset token in the server logs instead of a mailer.
-      console.log(`[dev] Password reset token for ${email}: ${resetToken}`);
+      // reset token in the server logs only in non-production environments.
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[dev] Password reset token for ${email}: ${resetToken}`);
+      }
     }
 
     return {
@@ -183,7 +213,7 @@ export class AuthService {
     await this.prisma.db.$transaction([
       this.prisma.db.users.update({
         where: { id: record.userId },
-        data: { password: newHash },
+        data: { password: newHash, passwordChangedAt: secondPrecision() },
       }),
       this.prisma.db.passwordReset.update({
         where: { id: record.id },
@@ -200,11 +230,11 @@ export class AuthService {
 
   private async resolveDefaultRoleId(): Promise<string> {
     const role = await this.prisma.db.roles.findUnique({
-      where: { name: DEFAULT_ROLE_NAME },
+      where: { name: ROLE_NAMES.USER },
     });
     if (!role) {
       throw new BadRequestException(
-        `Default role "${DEFAULT_ROLE_NAME}" is not configured.`,
+        `Default role "${ROLE_NAMES.USER}" is not configured.`,
       );
     }
     return role.id;
@@ -227,6 +257,9 @@ export class AuthService {
     });
     if (!user) {
       throw new UnauthorizedException('User no longer exists');
+    }
+    if (user.status !== AccountStatus.ACTIVE) {
+      throw new UnauthorizedException('Account is not active.');
     }
     return this.toAuthUser(user);
   }
@@ -251,6 +284,11 @@ export class AuthService {
       where: { userId, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+  }
+
+  private getDummyHash(): Promise<string> {
+    this.dummyHashPromise ??= bcrypt.hash(DUMMY_PASSWORD, SALT_ROUNDS);
+    return this.dummyHashPromise;
   }
 
   private signAccessToken(userId: string): string {
