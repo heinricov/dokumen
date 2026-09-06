@@ -22,6 +22,14 @@ import { PrismaService } from '../db/prisma.service';
 
 const SALT_ROUNDS = 10;
 
+// Serializable isolation prevents two concurrent "demote/delete the last
+// ADMIN" requests from both passing the admin-count check and leaving the
+// system without any ADMIN. Under serializability one writer aborts with
+// P2034 and is surfaced as a retryable conflict.
+const TRANSACTION_OPTIONS = {
+  isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+} as const;
+
 @Injectable()
 export class UsersService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
@@ -145,7 +153,7 @@ export class UsersService {
         },
         omit: { password: true },
       });
-    });
+    }, TRANSACTION_OPTIONS);
   }
 
   async remove(id: string, actorRoleName: string): Promise<User> {
@@ -165,7 +173,7 @@ export class UsersService {
       }
 
       return tx.users.delete({ where: { id }, omit: { password: true } });
-    });
+    }, TRANSACTION_OPTIONS);
   }
 
   private assertCanManage(actorRoleName: string, targetRoleName: string): void {

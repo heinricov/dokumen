@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Roles } from '../common/decorators/roles.decorator';
-import { IdParamDto } from '../common/dto/common.dto';
+import { UuidParamDto } from '../common/dto/common.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { validateDto } from '../common/pipes/dto-validation.pipe';
@@ -40,7 +40,7 @@ export class TeamsController {
   }
 
   @Get(':id')
-  findOne(@Param(validateDto(IdParamDto)) params: IdParamDto) {
+  findOne(@Param(validateDto(UuidParamDto)) params: UuidParamDto) {
     return this.teamsService.findOne(params.id);
   }
 
@@ -48,7 +48,7 @@ export class TeamsController {
   @UseGuards(RolesGuard)
   @Roles('ADMIN', 'MODERATOR')
   update(
-    @Param(validateDto(IdParamDto)) params: IdParamDto,
+    @Param(validateDto(UuidParamDto)) params: UuidParamDto,
     @Body(validateDto(UpdateTeamDto)) updateTeamDto: UpdateTeamDto,
   ) {
     return this.teamsService.update(params.id, updateTeamDto);
@@ -57,7 +57,7 @@ export class TeamsController {
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles('ADMIN', 'MODERATOR')
-  remove(@Param(validateDto(IdParamDto)) params: IdParamDto) {
+  remove(@Param(validateDto(UuidParamDto)) params: UuidParamDto) {
     return this.teamsService.remove(params.id);
   }
 }

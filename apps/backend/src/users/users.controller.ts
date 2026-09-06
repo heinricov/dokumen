@@ -13,7 +13,7 @@ import {
 import type { AuthUser } from '@workspace/types';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
-import { IdParamDto } from '../common/dto/common.dto';
+import { UuidParamDto } from '../common/dto/common.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { validateDto } from '../common/pipes/dto-validation.pipe';
@@ -46,14 +46,14 @@ export class UsersController {
 
   @Get(':id')
   @Roles('ADMIN', 'MODERATOR')
-  findOne(@Param(validateDto(IdParamDto)) params: IdParamDto) {
+  findOne(@Param(validateDto(UuidParamDto)) params: UuidParamDto) {
     return this.usersService.findOne(params.id);
   }
 
   @Patch(':id')
   @Roles('ADMIN', 'MODERATOR')
   update(
-    @Param(validateDto(IdParamDto)) params: IdParamDto,
+    @Param(validateDto(UuidParamDto)) params: UuidParamDto,
     @Body(validateDto(UpdateUserDto)) updateUserDto: UpdateUserDto,
     @CurrentUser() user: AuthUser,
   ) {
@@ -63,7 +63,7 @@ export class UsersController {
   @Delete(':id')
   @Roles('ADMIN', 'MODERATOR')
   remove(
-    @Param(validateDto(IdParamDto)) params: IdParamDto,
+    @Param(validateDto(UuidParamDto)) params: UuidParamDto,
     @CurrentUser() user: AuthUser,
   ) {
     return this.usersService.remove(params.id, user.role.name);

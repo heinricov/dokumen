@@ -1,12 +1,25 @@
+import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import helmet from 'helmet';
-import { readJwtEnv } from './config/jwt.config';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  readJwtEnv();
-
   const app = await NestFactory.create(AppModule);
+
+  const config = app.get(ConfigService);
+
+  // Global DTO validation. Note: under tsx/esbuild `design:paramtypes`
+  // metadata is not emitted, so the global pipe is pass-through at runtime;
+  // per-handler `validateDto(...)` pipes remain the source of truth.
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      stopAtFirstError: false,
+    }),
+  );
 
   app.setGlobalPrefix('api');
   app.enableShutdownHooks();
@@ -14,13 +27,11 @@ async function bootstrap() {
   app.use(helmet());
 
   app.enableCors({
-    origin: process.env.CORS_ORIGINS?.split(',').map((o) => o.trim()) ?? [
-      'http://localhost:5173',
-    ],
+    origin: config.get<string[]>('app.corsOrigins'),
     credentials: true,
   });
 
-  const port = Number(process.env.BACKEND_PORT ?? process.env.PORT ?? 4000);
+  const port = config.getOrThrow<number>('app.port');
   await app.listen(port);
   console.log(`API Berjalan di http://localhost:${port}/api`);
 }

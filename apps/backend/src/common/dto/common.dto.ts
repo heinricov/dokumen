@@ -3,18 +3,20 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
   MinLength,
 } from 'class-validator';
-import { MAX_PAGE_SIZE } from '@workspace/types';
+import { MAX_PAGE_NUMBER, MAX_PAGE_SIZE } from '@workspace/types';
 
 export class PageQueryDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(MAX_PAGE_NUMBER)
   page?: number;
 
   @IsOptional()
@@ -36,5 +38,10 @@ export class IdParamDto {
   @IsString()
   @MinLength(1)
   @MaxLength(64)
+  id: string;
+}
+
+export class UuidParamDto {
+  @IsUUID()
   id: string;
 }

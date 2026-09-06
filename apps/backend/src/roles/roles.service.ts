@@ -11,7 +11,7 @@ import type {
   RoleListResponse,
   UpdateRoleInput,
 } from '@workspace/types';
-import { isSystemRoleName } from '@workspace/types';
+import { isSystemRoleName, normalizeRoleName } from '@workspace/types';
 import { sanitizeLimit, sanitizePage } from '../common/utils/pagination';
 import { PrismaService } from '../db/prisma.service';
 
@@ -20,12 +20,13 @@ export class RolesService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async create(data: CreateRoleInput): Promise<Role> {
-    if (isSystemRoleName(data.name)) {
+    const name = normalizeRoleName(data.name);
+    if (isSystemRoleName(name)) {
       throw new ConflictException(
-        `Role name "${data.name}" is a reserved system role.`,
+        `Role name "${name}" is a reserved system role.`,
       );
     }
-    return this.prisma.db.roles.create({ data });
+    return this.prisma.db.roles.create({ data: { name } });
   }
 
   async findAll(query: RoleListQuery = {}): Promise<RoleListResponse> {
@@ -59,7 +60,19 @@ export class RolesService {
     if (role.isSystem) {
       throw new ForbiddenException('System roles cannot be modified.');
     }
-    return this.prisma.db.roles.update({ where: { id }, data });
+
+    const name =
+      data.name !== undefined ? normalizeRoleName(data.name) : undefined;
+    if (name !== undefined && isSystemRoleName(name)) {
+      throw new ConflictException(
+        `Role name "${name}" is a reserved system role.`,
+      );
+    }
+
+    return this.prisma.db.roles.update({
+      where: { id },
+      data: { ...(name !== undefined ? { name } : {}) },
+    });
   }
 
   async remove(id: string): Promise<Role> {

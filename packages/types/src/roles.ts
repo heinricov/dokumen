@@ -53,10 +53,12 @@ export const ROLE_RANK: Record<string, number> = {
   [ROLE_NAMES.ADMIN]: 3,
 }
 
-export const ADMIN_RANK = ROLE_RANK[ROLE_NAMES.ADMIN]
+export function normalizeRoleName(name: string): string {
+  return name.trim().toUpperCase()
+}
 
 export function roleRank(name: string): number {
-  return ROLE_RANK[name] ?? 0
+  return ROLE_RANK[normalizeRoleName(name)] ?? 0
 }
 
 export function isRoleAtLeast(name: string, min: RoleName): boolean {
@@ -64,23 +66,29 @@ export function isRoleAtLeast(name: string, min: RoleName): boolean {
 }
 
 export function isSystemRoleName(name: string): boolean {
-  return SYSTEM_ROLE_NAMES.includes(name as RoleName)
+  return SYSTEM_ROLE_NAMES.includes(normalizeRoleName(name) as RoleName)
 }
 
 /**
  * Returns true when `assigner` may create/update a user to the `target` role.
  *
- * Policy:
+ * Explicit policy:
  * - ADMIN may assign any role (USER, MODERATOR, ADMIN).
- * - MODERATOR may assign USER and MODERATOR, but never ADMIN.
- * - Any other (rank 0) may not assign anything meaningful.
- * The ("below ADMIN") restriction guarantees no one can mint an ADMIN account.
+ * - MODERATOR may assign USER and MODERATOR only, never ADMIN.
+ * - Anyone else (e.g. USER or unknown roles) may not assign anything.
  */
 export function canAssignRole(assigner: string, target: string): boolean {
-  const assignerRank = roleRank(assigner)
-  const targetRank = roleRank(target)
-  if (assignerRank <= 0) {
-    return false
+  const assignerRole = normalizeRoleName(assigner)
+  const targetRole = normalizeRoleName(target)
+
+  switch (assignerRole) {
+    case ROLE_NAMES.ADMIN:
+      return true
+    case ROLE_NAMES.MODERATOR:
+      return (
+        targetRole === ROLE_NAMES.USER || targetRole === ROLE_NAMES.MODERATOR
+      )
+    default:
+      return false
   }
-  return targetRank <= assignerRank && targetRank < ADMIN_RANK
 }

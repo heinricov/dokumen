@@ -4,7 +4,9 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import type { JwtSignOptions } from '@nestjs/jwt';
 import { AccountStatus, type Users } from '@workspace/db';
 import type {
   AuthUser,
@@ -23,7 +25,6 @@ import type {
 } from '@workspace/types';
 import { ROLE_NAMES } from '@workspace/types';
 import bcrypt from 'bcryptjs';
-import { readJwtEnv } from '../config/jwt.config';
 import { PrismaService } from '../db/prisma.service';
 import { secondPrecision } from '../common/utils/time';
 import { generateRefreshToken, generateResetToken, hashToken } from './tokens';
@@ -43,6 +44,7 @@ export class AuthService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(JwtService) private readonly jwt: JwtService,
+    @Inject(ConfigService) private readonly config: ConfigService,
   ) {}
 
   async register(input: RegisterInput): Promise<RegisterResponse> {
@@ -111,6 +113,12 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
+    // A merely expired token is rejected as expired — it is NOT treated as
+    // reuse/theft, so we must not revoke the whole session family for it.
+    if (token.expiresAt.getTime() <= Date.now()) {
+      throw new UnauthorizedException('Refresh token has expired');
+    }
+
     // Atomic claim: only one concurrent request can rotate a given token.
     // If the claim fails, the token was already consumed (replay/reuse/theft).
     const claim = await this.prisma.db.refreshToken.updateMany({
@@ -123,11 +131,6 @@ export class AuthService {
       throw new UnauthorizedException(
         'Refresh token has been reused. All sessions have been revoked.',
       );
-    }
-
-    if (token.expiresAt.getTime() <= Date.now()) {
-      await this.revokeAllTokens(token.userId);
-      throw new UnauthorizedException('Refresh token has expired');
     }
 
     const user = await this.fetchUser(token.userId);
@@ -155,7 +158,9 @@ export class AuthService {
 
     if (user) {
       const resetToken = generateResetToken();
-      const { resetExpiresInMs } = readJwtEnv();
+      const resetTokenTtlMs = this.config.getOrThrow<number>(
+        'auth.resetTokenTtlMs',
+      );
 
       await this.prisma.db.$transaction([
         // Clean up consumed/expired reset records for this account.
@@ -174,7 +179,7 @@ export class AuthService {
           data: {
             userId: user.id,
             tokenHash: hashToken(resetToken),
-            expiresAt: new Date(Date.now() + resetExpiresInMs),
+            expiresAt: new Date(Date.now() + resetTokenTtlMs),
           },
         }),
       ]);
@@ -266,13 +271,15 @@ export class AuthService {
 
   private async createRefreshToken(userId: string): Promise<string> {
     const refreshToken = generateRefreshToken();
-    const { refreshExpiresInMs } = readJwtEnv();
+    const refreshTokenTtlMs = this.config.getOrThrow<number>(
+      'auth.refreshTokenTtlMs',
+    );
 
     await this.prisma.db.refreshToken.create({
       data: {
         userId,
         tokenHash: hashToken(refreshToken),
-        expiresAt: new Date(Date.now() + refreshExpiresInMs),
+        expiresAt: new Date(Date.now() + refreshTokenTtlMs),
       },
     });
 
@@ -292,8 +299,10 @@ export class AuthService {
   }
 
   private signAccessToken(userId: string): string {
-    const { accessExpiresIn } = readJwtEnv();
-    return this.jwt.sign({ sub: userId }, { expiresIn: accessExpiresIn });
+    const accessTokenTtl = this.config.getOrThrow<JwtSignOptions['expiresIn']>(
+      'auth.accessTokenTtl',
+    );
+    return this.jwt.sign({ sub: userId }, { expiresIn: accessTokenTtl });
   }
 
   private toAuthUser(user: AuthUserRow): AuthUser {

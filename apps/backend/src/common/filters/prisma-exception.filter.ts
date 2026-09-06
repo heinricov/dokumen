@@ -34,6 +34,11 @@ export class PrismaExceptionFilter {
           'The operation violates a dependency constraint',
         );
         break;
+      case 'P2034':
+        mapped = new ConflictException(
+          'The request conflicted with a concurrent operation. Please retry.',
+        );
+        break;
       default:
         break;
     }
