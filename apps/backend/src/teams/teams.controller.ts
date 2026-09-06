@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Inject,
   Param,
   Patch,
   Post,
@@ -15,7 +16,9 @@ import { UpdateTeamDto } from './dto/update-team.dto';
 
 @Controller('teams')
 export class TeamsController {
-  constructor(private readonly teamsService: TeamsService) {}
+  constructor(
+    @Inject(TeamsService) private readonly teamsService: TeamsService,
+  ) {}
 
   @Post()
   create(@Body() createTeamDto: CreateTeamDto) {

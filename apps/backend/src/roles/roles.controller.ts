@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Inject,
   Param,
   Patch,
   Post,
@@ -15,7 +16,9 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 
 @Controller('roles')
 export class RolesController {
-  constructor(private readonly rolesService: RolesService) {}
+  constructor(
+    @Inject(RolesService) private readonly rolesService: RolesService,
+  ) {}
 
   @Post()
   create(@Body() createRoleDto: CreateRoleDto) {
