@@ -1,8 +1,8 @@
-import { Type } from 'class-transformer';
 import {
   IsEmail,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   MinLength,
 } from 'class-validator';
@@ -22,11 +22,10 @@ export class CreateUserDto {
   @MaxLength(72)
   password: string;
 
-  @IsString()
-  @MinLength(1)
+  @IsUUID()
   roleId: string;
 
   @IsOptional()
-  @Type(() => String)
+  @IsUUID()
   teamId?: string;
 }

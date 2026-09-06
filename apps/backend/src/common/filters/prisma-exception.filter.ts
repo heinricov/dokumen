@@ -16,45 +16,43 @@ import { Prisma } from '@workspace/db';
 export class PrismaExceptionFilter {
   private readonly logger = new Logger(PrismaExceptionFilter.name);
 
-  catch(exception: Prisma.PrismaClientKnownRequestError, host: ArgumentsHost) {
+  catch(
+    exception: Prisma.PrismaClientKnownRequestError,
+    host: ArgumentsHost,
+  ): void {
     const ctx = host.switchToHttp();
+
     const response = ctx.getResponse<Response>();
 
-    let mapped: HttpException | null = null;
+    const mapped = this.mapException(exception);
 
-    switch (exception.code) {
-      case 'P2002':
-        mapped = new ConflictException('Resource already exists');
-        break;
-      case 'P2025':
-        mapped = new NotFoundException('Resource not found');
-        break;
-      case 'P2003':
-        mapped = new ConflictException(
-          'The operation violates a dependency constraint',
-        );
-        break;
-      case 'P2034':
-        mapped = new ConflictException(
-          'The request conflicted with a concurrent operation. Please retry.',
-        );
-        break;
-      default:
-        break;
-    }
-
+    /**
+     * Known Prisma error yang dapat
+     * dipetakan menjadi HTTP response.
+     */
     if (mapped) {
       this.logger.warn(
-        `Prisma error ${exception.code} mapped to HTTP ${mapped.getStatus()}`,
+        `Prisma ${exception.code} mapped to HTTP ${mapped.getStatus()}`,
       );
-      const status = mapped.getStatus();
-      const body = mapped.getResponse();
-      response.status(status).json(body);
+
+      response.status(mapped.getStatus()).json(mapped.getResponse());
+
       return;
     }
 
+    /**
+     * Jangan kirim exception.message Prisma
+     * kepada client.
+     *
+     * Error detail dapat berisi:
+     * - table name
+     * - column name
+     * - constraint
+     * - query information
+     * - database information
+     */
     this.logger.error(
-      `Unmapped Prisma error ${exception.code}: ${exception.message}`,
+      `Unhandled Prisma error ${exception.code}: ${exception.message}`,
       exception.stack,
     );
 
@@ -62,5 +60,54 @@ export class PrismaExceptionFilter {
       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       message: 'Internal server error',
     });
+  }
+
+  /**
+   * Map Prisma error menjadi
+   * NestJS HttpException.
+   */
+  private mapException(
+    exception: Prisma.PrismaClientKnownRequestError,
+  ): HttpException | null {
+    switch (exception.code) {
+      /**
+       * Unique constraint.
+       *
+       * Contoh:
+       * - email sudah digunakan
+       * - role name sudah ada
+       * - team name sudah ada
+       */
+      case 'P2002':
+        return new ConflictException('Resource already exists.');
+
+      /**
+       * Record yang diminta tidak ditemukan.
+       */
+      case 'P2025':
+        return new NotFoundException('Resource not found.');
+
+      /**
+       * Foreign key constraint.
+       */
+      case 'P2003':
+        return new ConflictException(
+          'The operation violates a dependency constraint.',
+        );
+
+      /**
+       * Transaction conflict.
+       *
+       * Sangat relevan dengan transaction
+       * SERIALIZABLE pada UsersService.
+       */
+      case 'P2034':
+        return new ConflictException(
+          'The request conflicted with a concurrent operation. Please retry.',
+        );
+
+      default:
+        return null;
+    }
   }
 }
